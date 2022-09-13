@@ -1,0 +1,222 @@
+---
+title: "**Supplementary Information**"
+subtitle: "**Temporal variation in the prokaryotic community of a nearshore marine environment**"
+output:
+  pdf_document:
+    keep_tex: true
+    includes:
+      in_header: header_supplementary.tex
+fontsize: 12pt
+geometry: margin = 1.0in
+csl: citation_style.csl #Get themes at https://github.com/citation-style-language/styles
+bibliography: references.bib
+---
+
+```{r knitr_settings, eval = TRUE, echo = FALSE, cache = FALSE, message = FALSE}
+opts_chunk$set("tidy" = TRUE)
+opts_chunk$set("echo" = FALSE)
+opts_chunk$set("eval" = TRUE)
+opts_chunk$set("warning" = FALSE)
+opts_chunk$set("cache" = FALSE)
+opts_chunk$set("message" = FALSE)
+
+# Creating function to format numbers
+inline_hook <- function(x){
+	print(x)
+
+	if(is.list(x)){
+		x <- unlist(x)
+	}
+
+	if(is.numeric(x)){
+		if(abs(x - round(x)) < .Machine$double.eps ^ 0.5){
+			paste(format(x,big.mark = ',', digits = 0, scientific = FALSE))
+		} else {
+			paste(format(x,big.mark = ',', digits = 1, nsmall = 1, scientific = FALSE))
+		}
+	} else {
+    	paste(x)      
+	}
+}
+knitr :: knit_hooks$set(inline = inline_hook)
+
+library(kableExtra)
+```
+
+\vspace{10mm}
+Marino Korlević^1$*$^, Marsej Markovski^1^, Gerhard J. Herndl^2,3^, and Mirjana Najdek^1^
+
+1\. Center for Marine Research, Ruđer Bošković Institute, Croatia
+
+2\. Department of Functional and Evolutionary Ecology, University of Vienna, Austria
+
+3\. Department of Marine Microbiology and Biogeochemistry, Royal Netherlands Institute for Sea Research (NIOZ), Utrecht University, The Netherlands
+
+^$*$^To whom correspondence should be addressed:
+
+Marino Korlević
+
+G. Paliaga 5, 52210 Rovinj, Croatia
+
+Tel.: +385 52 804 768
+
+Fax: +385 52 804 780
+
+e-mail: marino.korlevic@irb.hr
+
+[]: # (\linenumbers)
+\newpage
+\sisetup{mode = text}
+\setlength\parindent{24pt}
+
+## Supplementary figures
+
+```{r out.width = "85%", fig.align = "center", fig.cap = "Rarefaction curves of bacterial and archaeal communities sampled in the Bay of Saline and Funtana.\\label{rarefaction}", fig.pos = "H"}
+include_graphics(normalizePath("results/figures/rarefaction.jpg"))
+```
+
+```{r out.width = "85%", fig.align = "center", fig.cap = "Seasonal dynamics of observed number of OTUs, Chao1, ACE, exponential of the Shannon diversity index, and Inverse Simpson index of bacterial and archaeal communities sampled in the Bay of Saline and Funtana.\\label{calculators}", fig.pos = "H"}
+include_graphics(normalizePath("results/figures/calculators.jpg"))
+```
+
+```{r out.width = "85%", fig.align = "center", fig.cap = "Proportion of shared bacterial and archaeal communities (Bray-Curtis similarity coefficient) and shared bacterial and archaeal OTUs (Jaccard's similarity coefficient) between consecutive sampling dates of communities sampled in the Bay of Saline and Funtana.\\label{shared}", fig.pos = "H"}
+include_graphics(normalizePath("results/figures/seasonal_shared.jpg"))
+```
+
+\newpage
+## Supplementary table
+
+```{r nseq_notus}
+# Loading OTU/sample data
+shared <- read_tsv("data/mothur/raw.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.pick.opti_mcc.shared")
+
+# Calculating the number of sequences and OTUs in each sample
+nseq_notus <- shared %>%
+  mutate(nseq = rowSums(select(., starts_with("Otu")))) %>%
+  mutate(notus = rowSums(select(., starts_with("Otu")) != 0)) %>%
+  select(Group, nseq, notus)
+
+# Loading metadata 
+metadata <- read_tsv("data/raw/metadata.csv")
+
+# Joining metadata with the number of sequences and OTUs
+invisible(Sys.setlocale(locale = "en_GB.utf8"))
+metadata_nseq_notus <- inner_join(metadata, nseq_notus, by = c("ID" = "Group")) %>%
+  select(ID, station, date, nseq, notus) %>%
+  mutate(date = as.Date(date, "%d.%m.%Y")) %>%
+  mutate(date = format(date, "%d %B %Y")) %>%
+  mutate(date = str_replace(date, "^0", "")) %>%
+  mutate(station = str_replace(station, "^S$", "Bay of Saline")) %>%
+  mutate(station = str_replace(station, "^F$", "Bay of Funtana")) %>%
+  mutate(ID = str_replace(ID, "^23_1$", "23a")) %>%
+  mutate(ID = str_replace(ID, "^23_2$", "23b")) %>%
+  mutate(nseq = format(nseq, big.mark = ","), notus = format(notus, big.mark = ","))
+
+# Generating the table
+kable(metadata_nseq_notus, format = "latex", booktabs = TRUE, linesep = "", longtable = TRUE, escape = FALSE, col.names = c("Sample ID", "Station", "Date", "Number of Sequences", "Number of OTUs"), caption = "Sample ID, sampling station and date, and number of sequences and OTUs of each sample. The number of sequences and OTUs was calculated after exclusion of sequences without known relatives (no relative sequences) and eukaryotic, chloroplast, and mitochondrial sequences.\\label{nseq_notus}", align = "c") %>%
+  kable_styling(latex_options = c("hold_position", "repeat_header"), font_size = 9) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(1, width = "6em")
+```
+
+```{r core_otus_taxonomy}
+# Loading rarefied community data created during the generation of the richness and diversity calculators plot
+load(file = "results/numerical/rarefied.Rdata")
+rarefied <- rarefied %>%
+  rownames_to_column("Group")
+
+# Joining metadata with OTU/sample data
+metadata_rarefied <- read_tsv("data/raw/metadata.csv") %>%
+  inner_join(., rarefied, by = c("ID" = "Group")) %>%
+  mutate(date = as.Date(date, "%d.%m.%Y"))
+
+# Finding the core OTUs and their taxonomy for each station
+core <- metadata_rarefied %>%
+  filter(station == "S") %>%
+  select_if(~ all(. != 0)) %>%
+  select(starts_with("Otu"))
+
+total <- metadata_rarefied %>%
+  filter(station == "S") %>%
+  select_if(~ any(. != 0)) %>%
+  select(starts_with("Otu"))
+
+core_otus_saline <- length(core) / length(total) * 100
+core_seq_saline <- sum(core) / sum(total) * 100
+
+core_otu_sum <- core %>%
+  colSums() %>%
+  as.list() %>%
+  as_tibble(rownames = NA) %>%
+  gather(key = "OTU", value = "size_normalized", 1 : ncol(.))
+
+otu_taxonomy_saline <- read_tsv("data/mothur/raw.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.pick.opti_mcc.0.03.cons.taxonomy") %>%
+  inner_join(core_otu_sum, ., by = c("OTU" = "OTU")) %>%
+  select(-Size)
+
+core <- metadata_rarefied %>%
+  filter(station == "F") %>%
+  select_if(~ all(. != 0)) %>%
+  select(starts_with("Otu"))
+
+total <- metadata_rarefied %>%
+  filter(station == "F") %>%
+  select_if(~ any(. != 0)) %>%
+  select(starts_with("Otu"))
+
+core_otus_funtana <- length(core) / length(total) * 100
+core_seq_funtana <- sum(core) / sum(total) * 100
+
+core_otu_sum <- core %>%
+  colSums() %>%
+  as.list() %>%
+  as_tibble(rownames = NA) %>%
+  gather(key = "OTU", value = "size_normalized", 1 : ncol(.))
+
+otu_taxonomy_funtana <- read_tsv("data/mothur/raw.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.pick.opti_mcc.0.03.cons.taxonomy") %>%
+  inner_join(core_otu_sum, ., by = c("OTU" = "OTU")) %>%
+  select(-Size)
+```
+
+\newpage
+\blandscape
+```{r core_otus_taxonomy_table}
+otu_taxonomy_saline <- otu_taxonomy_saline %>%
+  mutate(environment = "Bay of Saline", .before = OTU) %>%
+  arrange(desc(size_normalized)) %>%
+  slice(1 : 10)
+
+otu_taxonomy_funtana <- otu_taxonomy_funtana %>%
+  mutate(environment = "Bay of Funtana", .before = OTU) %>%
+  arrange(desc(size_normalized)) %>%
+  slice(1 : 10)
+
+otu_taxonomy <- rbind(otu_taxonomy_saline,
+                      otu_taxonomy_funtana) %>%
+  mutate(Taxonomy = str_replace_all(Taxonomy, ";", "; ")) %>%
+  mutate(Taxonomy = str_replace_all(Taxonomy, "\\([^\\)]+\\)", "")) %>%
+  mutate(Taxonomy = str_replace_all(Taxonomy, "[^;]+_(ge|fa);", "")) %>%
+  mutate(Taxonomy = str_replace_all(Taxonomy, "_", " ")) %>%
+  mutate(Taxonomy = str_replace(Taxonomy, "; $", "}")) %>%
+  mutate(Taxonomy = str_replace_all(Taxonomy, "^", "\\\\textit{")) %>%
+  mutate(Taxonomy = str_replace_all(Taxonomy, "; ", "}; \\\\textit{")) %>%
+  mutate(Taxonomy = str_replace(Taxonomy, "\\\\textit\\{SAR11 clade\\}", "SAR11 Clade")) %>%
+  mutate(Taxonomy = str_replace(Taxonomy, "\\\\textit\\{Clade I\\}", "Subclade I")) %>%
+  mutate(Taxonomy = str_replace(Taxonomy, "\\\\textit\\{Clade Ia\\}", "Subclade Ia")) %>%
+  mutate(Taxonomy = str_replace(Taxonomy, "\\\\textit\\{AEGEAN-169 marine group\\}", "AEGEAN-169 Marine Group")) %>%
+  mutate(Taxonomy = str_replace(Taxonomy, "\\\\textit\\{Synechococcus CC9902\\}", "\\\\textit{Synechococcus}")) %>%
+  mutate(Taxonomy = str_replace(Taxonomy, "\\\\textit\\{Clade III\\}", "Subclade III")) %>%
+  mutate(Taxonomy = str_replace(Taxonomy, "\\\\textit\\{Clade II\\}", "Subclade II")) %>%
+  mutate(Taxonomy = str_replace(Taxonomy, "\\\\textit\\{SAR86 clade\\}", "SAR86 Clade")) %>%
+  mutate(Taxonomy = str_replace(Taxonomy, "\\\\textit\\{Cryomorphaceae\\}; \\\\textit\\{uncultured\\}", "\\\\textit\\{Cryomorphaceae\\}; uncultured \\\\textit\\{Cryomorphaceae\\}")) %>%
+  mutate(Taxonomy = str_replace(Taxonomy, "\\\\textit\\{NS5 marine group\\}", "NS5 Marine Group")) %>%
+  mutate(Taxonomy = str_replace(Taxonomy, "\\\\textit\\{OM60 clade\\}", "OM60 Clade"))
+
+# Generating the table
+kable(otu_taxonomy, format = "latex", booktabs = TRUE, linesep = "", longtable = TRUE, escape = FALSE, col.names = c("Station", "OTU Number", "No. of Sequences", "OTU Taxonomy"), caption = "Taxonomic classification of OTUs present at every sampling date at each station (Bay of Saline and Funtana). Only ten OTUs with the highest number of sequences after normalization to the minimum number of reads per sample are shown.\\label{core_otus_taxonomy_table}", align = c("c", "c", "c", "l")) %>%
+  kable_styling(latex_options = c("hold_position", "repeat_header"), font_size = 9) %>%
+  row_spec(0, bold = TRUE) %>%
+  column_spec(1, width = "8em", latex_valign = "m") %>%
+  collapse_rows(columns = 1, valign = "middle", latex_hline = "major")
+```
+\elandscape

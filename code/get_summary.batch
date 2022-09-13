@@ -1,0 +1,17 @@
+set.logfile(name=data/mothur/summary.txt)
+
+summary.seqs(fasta=data/references/silva.nr_v138.pcr.align, processors=16)
+
+summary.seqs(fasta=data/references/silva.nr_v138.pcr.unique.align)
+
+summary.seqs(fasta=data/mothur/raw.trim.contigs.fasta)
+
+summary.seqs(fasta=data/mothur/raw.trim.contigs.good.unique.fasta, count=data/mothur/raw.trim.contigs.good.count_table)
+
+summary.seqs(fasta=data/mothur/raw.trim.contigs.good.unique.align, count=data/mothur/raw.trim.contigs.good.count_table)
+
+summary.seqs(fasta=data/mothur/raw.trim.contigs.good.unique.good.align, count=data/mothur/raw.trim.contigs.good.good.count_table)
+
+summary.seqs(fasta=data/mothur/raw.trim.contigs.good.unique.good.filter.unique.precluster.pick.fasta, count=data/mothur/raw.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.count_table)
+
+summary.seqs(fasta=data/mothur/raw.trim.contigs.good.unique.good.filter.unique.precluster.pick.pick.fasta, count=data/mothur/raw.trim.contigs.good.unique.good.filter.unique.precluster.denovo.vsearch.pick.pick.count_table)
